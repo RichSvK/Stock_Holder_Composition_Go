@@ -11,7 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/RichSvK/Stock_Holder_Composition_Go/database"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/configs"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/services"
 )
 
 var Scanner = bufio.NewScanner(os.Stdin)
@@ -35,7 +36,7 @@ func LoginMenu() *sql.DB {
 	password = ScanInput()
 	fmt.Print("Insert Database name: ")
 	dbName = ScanInput()
-	return database.GetConnection(username, password, dbName)
+	return configs.GetConnection(username, password, dbName)
 }
 
 func MainMenu() int {
@@ -65,7 +66,7 @@ func ExportMenu(db *sql.DB) {
 		fmt.Print("Input stock name: ")
 		code = ScanInput()
 	}
-	database.Export(code, db)
+	services.Export(code, db)
 }
 
 func InsertMenu(db *sql.DB) {
@@ -73,7 +74,7 @@ func InsertMenu(db *sql.DB) {
 	fmt.Println("Menu Insert")
 
 	// Change this to the directory you want to list files from
-	directory := "Data/"
+	directory := "data/"
 
 	// Initialize an empty slice to hold file paths
 	var fileList []string
@@ -97,7 +98,7 @@ func InsertMenu(db *sql.DB) {
 	var size int = len(fileList)
 	var tempName []string = nil
 	for i := 0; i < size; i++ {
-		tempName = strings.Split(fileList[i], "Data\\")
+		tempName = strings.Split(fileList[i], "data\\")
 		fmt.Printf("%d. %s from %s\n", (i + 1), tempName[1], fileList[i])
 	}
 
@@ -113,7 +114,7 @@ func InsertMenu(db *sql.DB) {
 			fmt.Println("Invalid Input")
 		}
 	}
-	database.InsertData(db, fileList[choice-1])
+	services.InsertData(db, fileList[choice-1])
 }
 
 func ClearScreen() {
