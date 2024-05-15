@@ -2,8 +2,6 @@ package services
 
 import (
 	"bufio"
-	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -12,62 +10,25 @@ import (
 	"time"
 
 	"github.com/RichSvK/Stock_Holder_Composition_Go/models"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/repository"
 )
 
-func Export(code string, poolDB *sql.DB) {
-	ctx := context.Background()
-	sql_query := "SELECT * FROM Stocks WHERE `Code` = ? ORDER BY `Date`"
-	statement, err := poolDB.PrepareContext(ctx, sql_query)
-	if err != nil {
-		fmt.Println("Fail to export because", err.Error())
-		return
-	}
-	defer statement.Close()
-
-	rows, err := statement.QueryContext(ctx, code)
-	if err != nil {
-		fmt.Println("Fail to export because", err.Error())
-		return
-	}
-	defer rows.Close()
-
-	if !rows.Next() {
+func Export(code string) {
+	listStock := repository.FindDataByCode(code)
+	if len(listStock) == 0 {
 		fmt.Println("No stock with code:", code)
 		return
 	}
 
-	// Check if there is a "Output" directory in current directory
-	_, checkFolder := os.Stat("./Output")
-
-	// If checkFolder != nil means there is no "Output" directory in current directory
-	for checkFolder != nil {
-		err := os.Mkdir("./Output", 0755)
-		if err != nil {
-			fmt.Println("Error creating directory")
-		}
-		_, checkFolder = os.Stat("./Output")
-	}
-
-	file, err := os.OpenFile("Output/"+code+".csv", os.O_WRONLY|os.O_CREATE, 0666)
+	file, err := os.OpenFile("output/"+code+".csv", os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println("Fail to open file because", err.Error())
 		return
 	}
 	defer file.Close()
 
-	stock := models.Stock{}
 	file.WriteString("Date,Code,Local IS,Local CP,Local PF,Local IB,Local ID,Local MF,Local SC,Local FD,Local OT,Foreign IS,Foreign CP,Foreign PF,Foreign IB,Foreign ID,Foreign MF,Foreign SC,Foreign FD,Foreign OT\n")
-	for {
-		err = rows.Scan(&stock.Date, &stock.Kode, &stock.LocalIS, &stock.LocalCP, &stock.LocalPF,
-			&stock.LocalIB, &stock.LocalID, &stock.LocalMF, &stock.LocalSC, &stock.LocalFD, &stock.LocalOT,
-			&stock.ForeignIS, &stock.ForeignCP, &stock.ForeignPF, &stock.ForeignIB, &stock.ForeignID,
-			&stock.ForeignMF, &stock.ForeignSC, &stock.ForeignFD, &stock.ForeignOT)
-
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-
+	for _, stock := range listStock {
 		formattedDate := stock.Date.Format("02-01-2006")
 		file.WriteString(formattedDate + ",")
 		file.WriteString(stock.Kode + ",")
@@ -90,25 +51,11 @@ func Export(code string, poolDB *sql.DB) {
 		file.WriteString(strconv.Itoa(int(stock.ForeignSC)) + ",")
 		file.WriteString(strconv.Itoa(int(stock.ForeignFD)) + ",")
 		file.WriteString(strconv.Itoa(int(stock.ForeignOT)) + "\n")
-
-		// If there is not next data then break out of loop
-		if !rows.Next() {
-			break
-		}
 	}
 	fmt.Printf("File %s.csv exported\n", code)
 }
 
-func InsertData(poolDB *sql.DB, fileName string) {
-	ctx := context.Background()
-	sql_query := "INSERT INTO Stocks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	statement, err := poolDB.PrepareContext(ctx, sql_query)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	defer statement.Close()
-
+func InsertData(fileName string) {
 	file, err := os.OpenFile(fileName, os.O_RDONLY, 0444)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -117,8 +64,6 @@ func InsertData(poolDB *sql.DB, fileName string) {
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
-	var stock = models.Stock{}
-	dateFormatter := "02-Jan-2006"
 
 	// Remove header
 	_, _, err = reader.ReadLine()
@@ -128,6 +73,8 @@ func InsertData(poolDB *sql.DB, fileName string) {
 	}
 
 	var rowsData []byte = nil
+	var stock = models.Stock{}
+	dateFormatter := "02-Jan-2006"
 	for {
 		rowsData, _, err = reader.ReadLine()
 		if err == io.EOF {
@@ -138,7 +85,6 @@ func InsertData(poolDB *sql.DB, fileName string) {
 
 		// Data "Type" from KSEI are "EQUITY", "CORPORATE BOND", and etc
 		// If the data type is equal then "CORPORATE BOND" then the "EQUITY" type is already read
-		// "EQUITY" is the type of the stock
 		if stockData[2] == "CORPORATE BOND" {
 			break
 		}
@@ -151,14 +97,14 @@ func InsertData(poolDB *sql.DB, fileName string) {
 		// Change the string to date
 		stock.Date, err = time.Parse(dateFormatter, string(stockData[0]))
 		if err != nil {
-			fmt.Println(err.Error(), "1")
+			fmt.Println(err.Error())
 			return
 		}
 
 		// Format the date
 		stock.Date, err = time.Parse("02-01-2006", stock.Date.Format("02-01-2006"))
 		if err != nil {
-			fmt.Println(err.Error(), "2")
+			fmt.Println(err.Error())
 			return
 		}
 
@@ -183,11 +129,8 @@ func InsertData(poolDB *sql.DB, fileName string) {
 		stock.ForeignFD, _ = strconv.ParseUint(string(stockData[22]), 10, 64)
 		stock.ForeignOT, _ = strconv.ParseUint(string(stockData[23]), 10, 64)
 
-		_, err = statement.ExecContext(ctx, stock.Date, stock.Kode, stock.LocalIS, stock.LocalCP, stock.LocalPF, stock.LocalIB, stock.LocalID, stock.LocalMF, stock.LocalSC, stock.LocalFD, stock.LocalOT,
-			stock.ForeignIS, stock.ForeignCP, stock.ForeignPF, stock.ForeignIB, stock.ForeignID, stock.ForeignMF, stock.ForeignSC, stock.ForeignFD, stock.ForeignOT)
-
-		if err != nil {
-			fmt.Println(err.Error(), "3")
+		if err := repository.InsertData(stock); err != nil {
+			fmt.Println(err.Error())
 			return
 		}
 	}
