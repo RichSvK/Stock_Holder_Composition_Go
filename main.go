@@ -3,19 +3,19 @@ package main
 import (
 	"fmt"
 
-	"github.com/RichSvK/Stock_Holder_Composition_Go/configs"
-	"github.com/RichSvK/Stock_Holder_Composition_Go/helpers"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/config"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/helper"
 	"github.com/RichSvK/Stock_Holder_Composition_Go/utilities"
 )
 
 func init() {
-	configs.MakeFolder("output")
+	config.MakeFolder("output")
 	utilities.LoginMenu()
 }
 
 func main() {
 	// Close database when the main function end
-	defer configs.PoolDB.Close()
+	defer config.PoolDB.Close()
 
 	var choice int = 0
 	for choice != 3 {
@@ -29,7 +29,7 @@ func main() {
 			fmt.Println("Program finished")
 			return
 		}
-		helpers.PressEnter()
-		helpers.ClearScreen()
+		helper.PressEnter()
+		helper.ClearScreen()
 	}
 }

@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/RichSvK/Stock_Holder_Composition_Go/configs"
-	"github.com/RichSvK/Stock_Holder_Composition_Go/models"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/config"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/model"
 )
 
-func FindDataByCode(code string) []models.Stock {
+func FindDataByCode(code string) []model.Stock {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 	sql_query := "SELECT * FROM Stocks WHERE `Code` = ? ORDER BY `Date`"
-	statement, err := configs.PoolDB.PrepareContext(ctx, sql_query)
+	statement, err := config.PoolDB.PrepareContext(ctx, sql_query)
 	if err != nil {
 		fmt.Println("Fail to export because", err.Error())
 		return nil
@@ -27,8 +27,8 @@ func FindDataByCode(code string) []models.Stock {
 	}
 	defer rows.Close()
 
-	var stock models.Stock
-	var listStock []models.Stock
+	var stock model.Stock
+	var listStock []model.Stock
 	for rows.Next() {
 		err = rows.Scan(&stock.Date, &stock.Kode, &stock.LocalIS, &stock.LocalCP, &stock.LocalPF,
 			&stock.LocalIB, &stock.LocalID, &stock.LocalMF, &stock.LocalSC, &stock.LocalFD, &stock.LocalOT,
@@ -44,12 +44,12 @@ func FindDataByCode(code string) []models.Stock {
 	return listStock
 }
 
-func InsertData(stock models.Stock) error {
+func InsertData(stock model.Stock) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 
 	sql_query := "INSERT INTO Stocks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	statement, err := configs.PoolDB.PrepareContext(ctx, sql_query)
+	statement, err := config.PoolDB.PrepareContext(ctx, sql_query)
 	if err != nil {
 		fmt.Println(err.Error())
 		return err

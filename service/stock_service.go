@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"bufio"
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RichSvK/Stock_Holder_Composition_Go/models"
+	"github.com/RichSvK/Stock_Holder_Composition_Go/model"
 	"github.com/RichSvK/Stock_Holder_Composition_Go/repository"
 )
 
@@ -73,7 +73,7 @@ func InsertData(fileName string) {
 	}
 
 	var rowsData []byte = nil
-	var stock = models.Stock{}
+	var stock = model.Stock{}
 	dateFormatter := "02-Jan-2006"
 	for {
 		rowsData, _, err = reader.ReadLine()
