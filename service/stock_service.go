@@ -14,7 +14,12 @@ import (
 )
 
 func Export(code string) {
-	listStock := repository.FindDataByCode(code)
+	listStock, err := repository.FindDataByCode(code)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 	if len(listStock) == 0 {
 		fmt.Println("No stock with code:", code)
 		return
